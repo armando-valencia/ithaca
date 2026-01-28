@@ -13,6 +13,7 @@ final class RepoStore: ObservableObject {
     @Published private(set) var repos: [Repo] = []
     @Published private(set) var workspaceRoots: [String] = []
     @Published var isScanning: Bool = false
+    private var pendingRescan: Bool = false
 
     private let rootsKey = "workspaceRoots"
     private let rootsBookmarksKey = "workspaceRootBookmarks"
@@ -60,7 +61,10 @@ final class RepoStore: ObservableObject {
     }
 
     func rescan() {
-        guard !isScanning else { return }
+        guard !isScanning else {
+            pendingRescan = true
+            return
+        }
         guard !workspaceRoots.isEmpty else {
             repos = []
             saveIndex()
@@ -87,6 +91,10 @@ final class RepoStore: ObservableObject {
                 self.repos = sorted
                 self.isScanning = false
                 self.saveIndex()
+                if self.pendingRescan {
+                    self.pendingRescan = false
+                    self.rescan()
+                }
             }
         }
     }

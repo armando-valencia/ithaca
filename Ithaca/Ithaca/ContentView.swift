@@ -15,9 +15,11 @@ struct RootView: View {
 
     @State private var query: String = ""
     @State private var selectedID: String?
+    @State private var hoveredID: String?
     @State private var errorMessage: String?
     @State private var showingSetupOverride: Bool = false
     @FocusState private var searchFocused: Bool
+    @State private var keyMonitor: Any?
 
     private var displayedRepos: [Repo] {
         let trimmed = query.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -45,6 +47,29 @@ struct RootView: View {
         .onAppear {
             if selectedID == nil {
                 selectedID = displayedRepos.first?.id
+            }
+            if keyMonitor == nil {
+                keyMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { event in
+                    switch event.keyCode {
+                    case 126:
+                        moveSelection(.up)
+                        return nil
+                    case 125:
+                        moveSelection(.down)
+                        return nil
+                    case 53:
+                        onRequestClose()
+                        return nil
+                    default:
+                        return event
+                    }
+                }
+            }
+        }
+        .onDisappear {
+            if let keyMonitor {
+                NSEvent.removeMonitor(keyMonitor)
+                self.keyMonitor = nil
             }
         }
         .onChange(of: query) { _, _ in
@@ -166,8 +191,12 @@ struct RootView: View {
                                 RepoRow(
                                     repo: repo,
                                     isSelected: repo.id == selectedID,
+                                    isHovered: repo.id == hoveredID,
                                     onSelect: { selectedID = repo.id },
-                                    onOpen: { openRepo(repo) }
+                                    onOpen: { openRepo(repo) },
+                                    onHover: { isHovering in
+                                        hoveredID = isHovering ? repo.id : (hoveredID == repo.id ? nil : hoveredID)
+                                    }
                                 )
                             }
                         }
@@ -236,33 +265,38 @@ struct RootView: View {
 struct RepoRow: View {
     let repo: Repo
     let isSelected: Bool
+    let isHovered: Bool
     let onSelect: () -> Void
     let onOpen: () -> Void
+    let onHover: (Bool) -> Void
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 2) {
-            Text(repo.name)
-                .font(.callout)
-                .foregroundStyle(.primary)
-            Text(displayPath(repo.path))
-                .font(.caption2)
-                .foregroundStyle(.secondary)
-                .lineLimit(1)
-                .truncationMode(.middle)
-        }
-        .padding(.vertical, 6)
-        .padding(.horizontal, 8)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(
-            RoundedRectangle(cornerRadius: 6)
-                .fill(isSelected ? Color.accentColor.opacity(0.15) : Color.clear)
-        )
-        .contentShape(Rectangle())
-        .onTapGesture {
+        Button(action: {
             onSelect()
-        }
-        .onTapGesture(count: 2) {
             onOpen()
+        }) {
+            VStack(alignment: .leading, spacing: 2) {
+                Text(repo.name)
+                    .font(.callout)
+                    .foregroundStyle(.primary)
+                Text(displayPath(repo.path))
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+                    .truncationMode(.middle)
+            }
+            .padding(.vertical, 6)
+            .padding(.horizontal, 8)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(
+                RoundedRectangle(cornerRadius: 6)
+                    .fill((isSelected || isHovered) ? Color.accentColor.opacity(0.15) : Color.clear)
+            )
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .onHover { isHovering in
+            onHover(isHovering)
         }
     }
 
