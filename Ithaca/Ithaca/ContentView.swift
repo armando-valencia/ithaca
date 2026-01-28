@@ -18,6 +18,7 @@ struct RootView: View {
     @State private var errorMessage: String?
     @State private var showingSetupOverride: Bool = false
     @FocusState private var searchFocused: Bool
+    @State private var keyMonitor: Any?
 
     private var displayedRepos: [Repo] {
         let trimmed = query.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -45,6 +46,29 @@ struct RootView: View {
         .onAppear {
             if selectedID == nil {
                 selectedID = displayedRepos.first?.id
+            }
+            if keyMonitor == nil {
+                keyMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { event in
+                    switch event.keyCode {
+                    case 126:
+                        moveSelection(.up)
+                        return nil
+                    case 125:
+                        moveSelection(.down)
+                        return nil
+                    case 53:
+                        onRequestClose()
+                        return nil
+                    default:
+                        return event
+                    }
+                }
+            }
+        }
+        .onDisappear {
+            if let keyMonitor {
+                NSEvent.removeMonitor(keyMonitor)
+                self.keyMonitor = nil
             }
         }
         .onChange(of: query) { _, _ in
@@ -261,9 +285,10 @@ struct RepoRow: View {
         .onTapGesture {
             onSelect()
         }
-        .onTapGesture(count: 2) {
-            onOpen()
-        }
+        .simultaneousGesture(
+            TapGesture(count: 2)
+                .onEnded { onOpen() }
+        )
     }
 
     private func displayPath(_ path: String) -> String {
