@@ -264,31 +264,30 @@ struct RepoRow: View {
     let onOpen: () -> Void
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 2) {
-            Text(repo.name)
-                .font(.callout)
-                .foregroundStyle(.primary)
-            Text(displayPath(repo.path))
-                .font(.caption2)
-                .foregroundStyle(.secondary)
-                .lineLimit(1)
-                .truncationMode(.middle)
-        }
-        .padding(.vertical, 6)
-        .padding(.horizontal, 8)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(
-            RoundedRectangle(cornerRadius: 6)
-                .fill(isSelected ? Color.accentColor.opacity(0.15) : Color.clear)
-        )
-        .contentShape(Rectangle())
-        .onTapGesture {
+        Button(action: {
             onSelect()
+            onOpen()
+        }) {
+            VStack(alignment: .leading, spacing: 2) {
+                Text(repo.name)
+                    .font(.callout)
+                    .foregroundStyle(.primary)
+                Text(displayPath(repo.path))
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+                    .truncationMode(.middle)
+            }
+            .padding(.vertical, 6)
+            .padding(.horizontal, 8)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(
+                RoundedRectangle(cornerRadius: 6)
+                    .fill(isSelected ? Color.accentColor.opacity(0.15) : Color.clear)
+            )
+            .contentShape(Rectangle())
         }
-        .simultaneousGesture(
-            TapGesture(count: 2)
-                .onEnded { onOpen() }
-        )
+        .buttonStyle(.plain)
     }
 
     private func displayPath(_ path: String) -> String {
