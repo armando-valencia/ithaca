@@ -14,11 +14,13 @@ final class RepoStore: ObservableObject {
     @Published private(set) var workspaceRoots: [String] = []
     @Published var isScanning: Bool = false
     @Published var defaultOpenTarget: OpenTarget = .vscode
+    @Published var showBranches: Bool = true
     private var pendingRescan: Bool = false
 
     private let rootsKey = "workspaceRoots"
     private let rootsBookmarksKey = "workspaceRootBookmarks"
     private let defaultOpenTargetKey = "defaultOpenTarget"
+    private let showBranchesKey = "showBranches"
     private let ignoredDirectories: Set<String> = [
         "node_modules", ".venv", "dist", "build", ".tox", ".pytest_cache",
         ".mypy_cache", ".next", "target", ".gradle"
@@ -38,6 +40,7 @@ final class RepoStore: ObservableObject {
         loadWorkspaceRootBookmarks()
         refreshWorkspaceRootBookmarks()
         loadDefaultOpenTarget()
+        loadShowBranches()
         loadCache()
     }
 
@@ -183,6 +186,19 @@ final class RepoStore: ObservableObject {
     func updateDefaultOpenTarget(_ target: OpenTarget) {
         defaultOpenTarget = target
         UserDefaults.standard.set(target.rawValue, forKey: defaultOpenTargetKey)
+    }
+
+    func updateShowBranches(_ enabled: Bool) {
+        showBranches = enabled
+        UserDefaults.standard.set(enabled, forKey: showBranchesKey)
+    }
+
+    private func loadShowBranches() {
+        if UserDefaults.standard.object(forKey: showBranchesKey) == nil {
+            showBranches = true
+            return
+        }
+        showBranches = UserDefaults.standard.bool(forKey: showBranchesKey)
     }
 
     private func storeBookmark(for path: String) {

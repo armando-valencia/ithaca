@@ -17,9 +17,12 @@ struct RootView: View {
     @State private var query: String = ""
     @State private var selectedID: String?
     @State private var hoveredID: String?
+    @State private var branchByID: [String: String] = [:]
+    @State private var branchLoading: Set<String> = []
     @State private var errorMessage: String?
     @State private var showingSetupOverride: Bool = false
     @State private var showingShortcutHelp: Bool = false
+    @State private var showingSettings: Bool = false
     @FocusState private var searchFocused: Bool
     @State private var keyMonitor: Any?
 
@@ -66,6 +69,7 @@ struct RootView: View {
             if selectedID == nil {
                 selectedID = displayedRepos.first?.id
             }
+            updateBranchesIfNeeded()
             if keyMonitor == nil {
                 keyMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { event in
                     switch event.keyCode {
@@ -98,6 +102,13 @@ struct RootView: View {
                 return
             }
             selectedID = displayedRepos.first?.id
+            updateBranchesIfNeeded()
+        }
+        .onChange(of: store.repos.map { $0.id }) { _, _ in
+            updateBranchesIfNeeded()
+        }
+        .onChange(of: query) { _, _ in
+            updateBranchesIfNeeded()
         }
         .onMoveCommand { direction in
             moveSelection(direction)
@@ -118,7 +129,7 @@ struct RootView: View {
                     .buttonStyle(.link)
                 }
             }
-            Text("Add workspace roots to scan repositories.")
+            Text("Add directories to scan repositories.")
                 .font(.callout)
                 .foregroundStyle(.secondary)
 
@@ -139,7 +150,7 @@ struct RootView: View {
             }
 
             HStack(spacing: 10) {
-                Button("Add Root…") {
+                Button("Add Directory…") {
                     chooseWorkspaceRoot()
                 }
                 Button("Scan Repositories") {
@@ -180,10 +191,18 @@ struct RootView: View {
                     Text(store.defaultOpenTarget.displayName)
                 }
                 .menuStyle(.borderlessButton)
-                Button("Roots…") {
-                    showingSetupOverride = true
+                Button {
+                    showingSettings.toggle()
+                } label: {
+                    Image(systemName: "gearshape")
+                        .foregroundStyle(.secondary)
                 }
-                .buttonStyle(.link)
+                .buttonStyle(.plain)
+                .popover(isPresented: $showingSettings, arrowEdge: .top) {
+                    settingsView
+                        .frame(width: 360)
+                        .padding(12)
+                }
             }
             HStack(spacing: 8) {
                 Text("Shortcut:")
@@ -213,7 +232,7 @@ struct RootView: View {
                                     Button("Scan Repositories") {
                                         store.rescan()
                                     }
-                                    Button("Manage Roots…") {
+                                    Button("Manage Directories…") {
                                         showingSetupOverride = true
                                     }
                                     .buttonStyle(.link)
@@ -227,14 +246,16 @@ struct RootView: View {
                                         repo: repo,
                                         isSelected: repo.id == selectedID,
                                         isHovered: repo.id == hoveredID,
+                                        branch: branchByID[repo.id],
+                                        showBranch: store.showBranches,
                                         onSelect: { selectedID = repo.id },
-                                    onOpen: { openRepo(repo, targetOverride: nil) },
+                                        onOpen: { openRepo(repo, targetOverride: nil) },
                                         onHover: { isHovering in
                                             hoveredID = isHovering ? repo.id : (hoveredID == repo.id ? nil : hoveredID)
                                         },
-                                    onTogglePin: { store.togglePin(repoID: repo.id) },
-                                    onOpenWith: { target in openRepo(repo, targetOverride: target) }
-                                )
+                                        onTogglePin: { store.togglePin(repoID: repo.id) },
+                                        onOpenWith: { target in openRepo(repo, targetOverride: target) }
+                                    )
                             }
                             } else {
                                 if !pinnedRepos.isEmpty {
@@ -247,6 +268,8 @@ struct RootView: View {
                                         repo: repo,
                                         isSelected: repo.id == selectedID,
                                         isHovered: repo.id == hoveredID,
+                                        branch: branchByID[repo.id],
+                                        showBranch: store.showBranches,
                                         onSelect: { selectedID = repo.id },
                                         onOpen: { openRepo(repo, targetOverride: nil) },
                                         onHover: { isHovering in
@@ -266,6 +289,8 @@ struct RootView: View {
                                         repo: repo,
                                         isSelected: repo.id == selectedID,
                                         isHovered: repo.id == hoveredID,
+                                        branch: branchByID[repo.id],
+                                        showBranch: store.showBranches,
                                         onSelect: { selectedID = repo.id },
                                         onOpen: { openRepo(repo, targetOverride: nil) },
                                         onHover: { isHovering in
@@ -279,6 +304,62 @@ struct RootView: View {
                         }
                     }
                     .padding(.vertical, 2)
+                }
+            }
+        }
+    }
+
+    private var settingsView: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Settings")
+                .font(.callout)
+            Toggle(isOn: Binding(
+                get: { store.showBranches },
+                set: { store.updateShowBranches($0) }
+            )) {
+                Text("Show branches")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+            .toggleStyle(.switch)
+
+            Divider()
+
+            VStack(alignment: .leading, spacing: 8) {
+                Text("Directories")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                ForEach(store.workspaceRoots, id: \.self) { root in
+                    HStack(spacing: 8) {
+                        Text(root)
+                            .font(.caption)
+                            .lineLimit(1)
+                            .truncationMode(.middle)
+                        Spacer()
+                        Button("Remove") {
+                            store.removeWorkspaceRoot(root)
+                        }
+                        .buttonStyle(.link)
+                        .font(.caption)
+                    }
+                }
+            }
+
+            HStack(spacing: 10) {
+                Button("Add Directory…") {
+                    chooseWorkspaceRoot()
+                }
+                Button("Scan Repositories") {
+                    store.rescan()
+                }
+                .disabled(store.workspaceRoots.isEmpty)
+
+                Spacer()
+
+                if store.isScanning {
+                    ProgressView()
+                        .controlSize(.small)
+                        .frame(width: 16, height: 16)
                 }
             }
         }
@@ -327,6 +408,23 @@ struct RootView: View {
         }
     }
 
+    private func updateBranchesIfNeeded() {
+        guard store.showBranches else { return }
+        for repo in displayedRepos {
+            guard branchByID[repo.id] == nil, !branchLoading.contains(repo.id) else { continue }
+            branchLoading.insert(repo.id)
+            Task {
+                let branch = await GitBranchProvider.branch(for: repo.path)
+                await MainActor.run {
+                    if let branch {
+                        branchByID[repo.id] = branch
+                    }
+                    branchLoading.remove(repo.id)
+                }
+            }
+        }
+    }
+
     private func chooseWorkspaceRoot() {
         let panel = NSOpenPanel()
         panel.allowsMultipleSelection = false
@@ -345,6 +443,8 @@ struct RepoRow: View {
     let repo: Repo
     let isSelected: Bool
     let isHovered: Bool
+    let branch: String?
+    let showBranch: Bool
     let onSelect: () -> Void
     let onOpen: () -> Void
     let onHover: (Bool) -> Void
@@ -368,11 +468,20 @@ struct RepoRow: View {
                     }
                     Spacer(minLength: 0)
                 }
-                Text(displayPath(repo.path))
-                    .font(.caption2)
-                    .foregroundStyle(.secondary)
-                    .lineLimit(1)
-                    .truncationMode(.middle)
+                HStack(spacing: 6) {
+                    Text(displayPath(repo.path))
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
+                        .truncationMode(.middle)
+                    if showBranch, let branch {
+                        Text("• \(branch)")
+                            .font(.caption2)
+                            .foregroundStyle(Color.secondary.opacity(0.75))
+                            .lineLimit(1)
+                    }
+                    Spacer(minLength: 0)
+                }
             }
             .padding(.vertical, 6)
             .padding(.horizontal, 8)
