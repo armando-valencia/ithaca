@@ -15,6 +15,7 @@ struct RootView: View {
 
     @State private var query: String = ""
     @State private var selectedID: String?
+    @State private var hoveredID: String?
     @State private var errorMessage: String?
     @State private var showingSetupOverride: Bool = false
     @FocusState private var searchFocused: Bool
@@ -190,8 +191,12 @@ struct RootView: View {
                                 RepoRow(
                                     repo: repo,
                                     isSelected: repo.id == selectedID,
+                                    isHovered: repo.id == hoveredID,
                                     onSelect: { selectedID = repo.id },
-                                    onOpen: { openRepo(repo) }
+                                    onOpen: { openRepo(repo) },
+                                    onHover: { isHovering in
+                                        hoveredID = isHovering ? repo.id : (hoveredID == repo.id ? nil : hoveredID)
+                                    }
                                 )
                             }
                         }
@@ -260,8 +265,10 @@ struct RootView: View {
 struct RepoRow: View {
     let repo: Repo
     let isSelected: Bool
+    let isHovered: Bool
     let onSelect: () -> Void
     let onOpen: () -> Void
+    let onHover: (Bool) -> Void
 
     var body: some View {
         Button(action: {
@@ -283,11 +290,14 @@ struct RepoRow: View {
             .frame(maxWidth: .infinity, alignment: .leading)
             .background(
                 RoundedRectangle(cornerRadius: 6)
-                    .fill(isSelected ? Color.accentColor.opacity(0.15) : Color.clear)
+                    .fill((isSelected || isHovered) ? Color.accentColor.opacity(0.15) : Color.clear)
             )
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
+        .onHover { isHovering in
+            onHover(isHovering)
+        }
     }
 
     private func displayPath(_ path: String) -> String {
