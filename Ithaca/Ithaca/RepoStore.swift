@@ -13,10 +13,12 @@ final class RepoStore: ObservableObject {
     @Published private(set) var repos: [Repo] = []
     @Published private(set) var workspaceRoots: [String] = []
     @Published var isScanning: Bool = false
+    @Published var defaultOpenTarget: OpenTarget = .vscode
     private var pendingRescan: Bool = false
 
     private let rootsKey = "workspaceRoots"
     private let rootsBookmarksKey = "workspaceRootBookmarks"
+    private let defaultOpenTargetKey = "defaultOpenTarget"
     private let ignoredDirectories: Set<String> = [
         "node_modules", ".venv", "dist", "build", ".tox", ".pytest_cache",
         ".mypy_cache", ".next", "target", ".gradle"
@@ -35,6 +37,7 @@ final class RepoStore: ObservableObject {
         loadWorkspaceRoots()
         loadWorkspaceRootBookmarks()
         refreshWorkspaceRootBookmarks()
+        loadDefaultOpenTarget()
         loadCache()
     }
 
@@ -82,6 +85,8 @@ final class RepoStore: ObservableObject {
                 if let prior = existing[repo.id] {
                     var updated = repo
                     updated.lastOpened = prior.lastOpened
+                    updated.isPinned = prior.isPinned
+                    updated.openTarget = prior.openTarget
                     return updated
                 }
                 return repo
@@ -105,6 +110,24 @@ final class RepoStore: ObservableObject {
         saveIndex()
     }
 
+    func togglePin(repoID: String) {
+        guard let index = repos.firstIndex(where: { $0.id == repoID }) else { return }
+        repos[index].isPinned.toggle()
+        saveIndex()
+    }
+
+    func setPinned(repoID: String, isPinned: Bool) {
+        guard let index = repos.firstIndex(where: { $0.id == repoID }) else { return }
+        repos[index].isPinned = isPinned
+        saveIndex()
+    }
+
+    func setOpenTarget(repoID: String, target: OpenTarget?) {
+        guard let index = repos.firstIndex(where: { $0.id == repoID }) else { return }
+        repos[index].openTarget = target
+        saveIndex()
+    }
+
     func recentRepos() -> [Repo] {
         repos
             .compactMap { $0.lastOpened == nil ? nil : $0 }
@@ -116,6 +139,12 @@ final class RepoStore: ObservableObject {
             }
             .prefix(12)
             .map { $0 }
+    }
+
+    func pinnedRepos() -> [Repo] {
+        repos
+            .filter { $0.isPinned }
+            .sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
     }
 
     private func loadWorkspaceRoots() {
@@ -140,6 +169,20 @@ final class RepoStore: ObservableObject {
 
     private func saveWorkspaceRootBookmarks() {
         UserDefaults.standard.set(workspaceRootBookmarks, forKey: rootsBookmarksKey)
+    }
+
+    private func loadDefaultOpenTarget() {
+        guard let raw = UserDefaults.standard.string(forKey: defaultOpenTargetKey),
+              let target = OpenTarget(rawValue: raw) else {
+            defaultOpenTarget = .vscode
+            return
+        }
+        defaultOpenTarget = target
+    }
+
+    func updateDefaultOpenTarget(_ target: OpenTarget) {
+        defaultOpenTarget = target
+        UserDefaults.standard.set(target.rawValue, forKey: defaultOpenTargetKey)
     }
 
     private func storeBookmark(for path: String) {
@@ -244,7 +287,12 @@ final class RepoStore: ObservableObject {
             let rootGitURL = rootURL.appendingPathComponent(".git")
             var isRootGitDirectory: ObjCBool = false
             if fileManager.fileExists(atPath: rootGitURL.path, isDirectory: &isRootGitDirectory) {
-                let repo = Repo(name: rootURL.lastPathComponent, path: rootURL.path)
+                let repo = Repo(
+                    name: rootURL.lastPathComponent,
+                    path: rootURL.path,
+                    rootPath: rootURL.path,
+                    rootName: rootURL.lastPathComponent
+                )
                 if seen.insert(repo.id).inserted {
                     results.append(repo)
                 }
@@ -269,7 +317,12 @@ final class RepoStore: ObservableObject {
                 var isGitDirectory: ObjCBool = false
                 if fileManager.fileExists(atPath: gitURL.path, isDirectory: &isGitDirectory) {
                     let repoName = url.lastPathComponent
-                    let repo = Repo(name: repoName, path: url.path)
+                    let repo = Repo(
+                        name: repoName,
+                        path: url.path,
+                        rootPath: rootURL.path,
+                        rootName: rootURL.lastPathComponent
+                    )
                     if seen.insert(repo.id).inserted {
                         results.append(repo)
                     }

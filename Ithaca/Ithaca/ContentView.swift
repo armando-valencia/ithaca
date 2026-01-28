@@ -11,6 +11,7 @@ import AppKit
 struct RootView: View {
     @ObservedObject var store: RepoStore
     @ObservedObject var popoverState: PopoverState
+    @ObservedObject var hotkeyStore: HotkeyStore
     let onRequestClose: () -> Void
 
     @State private var query: String = ""
@@ -18,15 +19,32 @@ struct RootView: View {
     @State private var hoveredID: String?
     @State private var errorMessage: String?
     @State private var showingSetupOverride: Bool = false
+    @State private var showingShortcutHelp: Bool = false
     @FocusState private var searchFocused: Bool
     @State private var keyMonitor: Any?
 
     private var displayedRepos: [Repo] {
         let trimmed = query.trimmingCharacters(in: .whitespacesAndNewlines)
         if trimmed.isEmpty {
-            return store.recentRepos()
+            let pinned = store.pinnedRepos()
+            let recents = store.recentRepos().filter { !$0.isPinned }
+            return pinned + recents
         }
-        return SearchRanker.search(repos: store.repos, query: trimmed)
+        let pinned = SearchRanker.search(repos: store.repos.filter { $0.isPinned }, query: trimmed)
+        let others = SearchRanker.search(repos: store.repos.filter { !$0.isPinned }, query: trimmed)
+        return pinned + others
+    }
+
+    private var pinnedRepos: [Repo] {
+        store.pinnedRepos()
+    }
+
+    private var recentRepos: [Repo] {
+        store.recentRepos().filter { !$0.isPinned }
+    }
+
+    private var isSearching: Bool {
+        !query.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
     }
 
     var body: some View {
@@ -149,10 +167,49 @@ struct RootView: View {
                     .onSubmit {
                         openSelectedRepo()
                     }
+                Menu {
+                    Picker("Default Open", selection: Binding(
+                        get: { store.defaultOpenTarget },
+                        set: { store.updateDefaultOpenTarget($0) }
+                    )) {
+                        ForEach(OpenTarget.allCases) { target in
+                            Text(target.displayName).tag(target)
+                        }
+                    }
+                } label: {
+                    Text(store.defaultOpenTarget.displayName)
+                }
+                .menuStyle(.borderlessButton)
                 Button("Roots…") {
                     showingSetupOverride = true
                 }
                 .buttonStyle(.link)
+            }
+            HStack(spacing: 8) {
+                Text("Shortcut:")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                Text(hotkeyStore.hotkey?.displayString ?? "Off")
+                    .font(.system(.caption, design: .monospaced))
+                    .foregroundStyle(.secondary)
+                Button {
+                    showingShortcutHelp.toggle()
+                } label: {
+                    Image(systemName: "info.circle")
+                        .foregroundStyle(.secondary)
+                }
+                .buttonStyle(.plain)
+                .popover(isPresented: $showingShortcutHelp, arrowEdge: .bottom) {
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text("Global Shortcut")
+                            .font(.callout)
+                        Text("Use control (⌃) + option (⌥) + command (⌘) + I.")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                    .padding(10)
+                }
+                Spacer()
             }
 
             if let errorMessage {
@@ -162,12 +219,6 @@ struct RootView: View {
             }
 
             VStack(alignment: .leading, spacing: 8) {
-                if query.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-                    Text("Recent")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
-
                 ScrollView {
                     LazyVStack(alignment: .leading, spacing: 6) {
                         if displayedRepos.isEmpty {
@@ -187,17 +238,60 @@ struct RootView: View {
                             }
                             .padding(.vertical, 8)
                         } else {
-                            ForEach(displayedRepos) { repo in
-                                RepoRow(
-                                    repo: repo,
-                                    isSelected: repo.id == selectedID,
-                                    isHovered: repo.id == hoveredID,
-                                    onSelect: { selectedID = repo.id },
-                                    onOpen: { openRepo(repo) },
-                                    onHover: { isHovering in
-                                        hoveredID = isHovering ? repo.id : (hoveredID == repo.id ? nil : hoveredID)
-                                    }
+                            if isSearching {
+                                ForEach(displayedRepos) { repo in
+                                    RepoRow(
+                                        repo: repo,
+                                        isSelected: repo.id == selectedID,
+                                        isHovered: repo.id == hoveredID,
+                                        onSelect: { selectedID = repo.id },
+                                    onOpen: { openRepo(repo, targetOverride: nil) },
+                                        onHover: { isHovering in
+                                            hoveredID = isHovering ? repo.id : (hoveredID == repo.id ? nil : hoveredID)
+                                        },
+                                    onTogglePin: { store.togglePin(repoID: repo.id) },
+                                    onOpenWith: { target in openRepo(repo, targetOverride: target) }
                                 )
+                            }
+                            } else {
+                                if !pinnedRepos.isEmpty {
+                                    Text("Pinned")
+                                        .font(.caption)
+                                        .foregroundStyle(.secondary)
+                                }
+                                ForEach(pinnedRepos) { repo in
+                                    RepoRow(
+                                        repo: repo,
+                                        isSelected: repo.id == selectedID,
+                                        isHovered: repo.id == hoveredID,
+                                        onSelect: { selectedID = repo.id },
+                                        onOpen: { openRepo(repo, targetOverride: nil) },
+                                        onHover: { isHovering in
+                                            hoveredID = isHovering ? repo.id : (hoveredID == repo.id ? nil : hoveredID)
+                                        },
+                                        onTogglePin: { store.togglePin(repoID: repo.id) },
+                                        onOpenWith: { target in openRepo(repo, targetOverride: target) }
+                                    )
+                                }
+                                if !recentRepos.isEmpty {
+                                    Text("Recent")
+                                        .font(.caption)
+                                        .foregroundStyle(.secondary)
+                                }
+                                ForEach(recentRepos) { repo in
+                                    RepoRow(
+                                        repo: repo,
+                                        isSelected: repo.id == selectedID,
+                                        isHovered: repo.id == hoveredID,
+                                        onSelect: { selectedID = repo.id },
+                                        onOpen: { openRepo(repo, targetOverride: nil) },
+                                        onHover: { isHovering in
+                                            hoveredID = isHovering ? repo.id : (hoveredID == repo.id ? nil : hoveredID)
+                                        },
+                                        onTogglePin: { store.togglePin(repoID: repo.id) },
+                                        onOpenWith: { target in openRepo(repo, targetOverride: target) }
+                                    )
+                                }
                             }
                         }
                     }
@@ -229,13 +323,14 @@ struct RootView: View {
 
     private func openSelectedRepo() {
         guard let repo = displayedRepos.first(where: { $0.id == selectedID }) else { return }
-        openRepo(repo)
+        openRepo(repo, targetOverride: nil)
     }
 
-    private func openRepo(_ repo: Repo) {
+    private func openRepo(_ repo: Repo, targetOverride: OpenTarget?) {
         errorMessage = nil
         Task {
-            let result = await VSCodeOpener.open(path: repo.path)
+            let target = targetOverride ?? store.defaultOpenTarget
+            let result = await OpenTargetOpener.open(target: target, path: repo.path)
             switch result {
             case .success:
                 await MainActor.run {
@@ -260,6 +355,7 @@ struct RootView: View {
             store.addWorkspaceRoot(url.path)
         }
     }
+
 }
 
 struct RepoRow: View {
@@ -269,6 +365,8 @@ struct RepoRow: View {
     let onSelect: () -> Void
     let onOpen: () -> Void
     let onHover: (Bool) -> Void
+    let onTogglePin: () -> Void
+    let onOpenWith: (OpenTarget?) -> Void
 
     var body: some View {
         Button(action: {
@@ -276,9 +374,17 @@ struct RepoRow: View {
             onOpen()
         }) {
             VStack(alignment: .leading, spacing: 2) {
-                Text(repo.name)
-                    .font(.callout)
-                    .foregroundStyle(.primary)
+                HStack(spacing: 6) {
+                    Text(repo.name)
+                        .font(.callout)
+                        .foregroundStyle(.primary)
+                    if repo.isPinned {
+                        Image(systemName: "pin.fill")
+                            .font(.caption2)
+                            .foregroundStyle(.secondary)
+                    }
+                    Spacer(minLength: 0)
+                }
                 Text(displayPath(repo.path))
                     .font(.caption2)
                     .foregroundStyle(.secondary)
@@ -297,6 +403,21 @@ struct RepoRow: View {
         .buttonStyle(.plain)
         .onHover { isHovering in
             onHover(isHovering)
+        }
+        .contextMenu {
+            Button(repo.isPinned ? "Unpin" : "Pin") {
+                onTogglePin()
+            }
+            Menu("Open With") {
+                Button("Use Default") {
+                    onOpenWith(nil)
+                }
+                ForEach(OpenTarget.allCases) { target in
+                    Button(target.displayName) {
+                        onOpenWith(target)
+                    }
+                }
+            }
         }
     }
 
@@ -319,5 +440,5 @@ struct RepoRow: View {
 }
 
 #Preview {
-    RootView(store: RepoStore(), popoverState: PopoverState(), onRequestClose: {})
+    RootView(store: RepoStore(), popoverState: PopoverState(), hotkeyStore: HotkeyStore(), onRequestClose: {})
 }

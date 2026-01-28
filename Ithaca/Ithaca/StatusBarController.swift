@@ -18,7 +18,7 @@ final class StatusBarController: NSObject, NSPopoverDelegate {
     private let popover: NSPopover
     private let popoverState: PopoverState
 
-    init(store: RepoStore, popoverState: PopoverState) {
+    init(store: RepoStore, popoverState: PopoverState, hotkeyStore: HotkeyStore) {
         self.statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
         self.popover = NSPopover()
         self.popoverState = popoverState
@@ -31,6 +31,7 @@ final class StatusBarController: NSObject, NSPopoverDelegate {
             rootView: RootView(
                 store: store,
                 popoverState: popoverState,
+                hotkeyStore: hotkeyStore,
                 onRequestClose: { [weak self] in self?.closePopover() }
             )
         )
@@ -50,6 +51,10 @@ final class StatusBarController: NSObject, NSPopoverDelegate {
         } else {
             showPopover()
         }
+    }
+
+    func togglePopoverFromHotkey() {
+        togglePopover()
     }
 
     private func showPopover() {

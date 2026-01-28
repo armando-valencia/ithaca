@@ -7,16 +7,37 @@
 
 import Foundation
 
-enum VSCodeOpenError: LocalizedError {
-    case failed(codeStatus: Int32, openStatus: Int32)
+enum OpenTargetError: LocalizedError {
+    case failed(target: OpenTarget)
 
     var errorDescription: String? {
-        "Could not open in Visual Studio Code. Install the app or enable the 'code' command."
+        switch self {
+        case .failed(let target):
+            switch target {
+            case .vscode:
+                return "Could not open in Visual Studio Code. Install the app or enable the 'code' command."
+            case .xcode:
+                return "Could not open in Xcode."
+            case .finder:
+                return "Could not reveal in Finder."
+            }
+        }
     }
 }
 
-struct VSCodeOpener {
-    static func open(path: String) async -> Result<Void, VSCodeOpenError> {
+struct OpenTargetOpener {
+    static func open(target: OpenTarget, path: String) async -> Result<Void, OpenTargetError> {
+        switch target {
+        case .vscode:
+            return await openVSCode(path: path)
+        case .xcode:
+            return await openApp(name: "Xcode", path: path, target: target)
+        case .finder:
+            return await openFinder(path: path)
+        }
+    }
+
+    private static func openVSCode(path: String) async -> Result<Void, OpenTargetError> {
         let codeResult = await ProcessRunner.run(
             executable: "/usr/bin/env",
             arguments: ["code", path]
@@ -33,8 +54,32 @@ struct VSCodeOpener {
             return .success(())
         }
 
-        return .failure(.failed(codeStatus: codeResult.exitCode, openStatus: openResult.exitCode))
+        return .failure(.failed(target: .vscode))
     }
+
+    private static func openApp(name: String, path: String, target: OpenTarget) async -> Result<Void, OpenTargetError> {
+        let openResult = await ProcessRunner.run(
+            executable: "/usr/bin/open",
+            arguments: ["-a", name, path]
+        )
+        if openResult.exitCode == 0 {
+            return .success(())
+        }
+        return .failure(.failed(target: target))
+    }
+
+    private static func openFinder(path: String) async -> Result<Void, OpenTargetError> {
+        let openResult = await ProcessRunner.run(
+            executable: "/usr/bin/open",
+            arguments: ["-R", path]
+        )
+        if openResult.exitCode == 0 {
+            return .success(())
+        }
+        return .failure(.failed(target: .finder))
+    }
+
+ 
 }
 
 struct ProcessResult {
