@@ -16,6 +16,7 @@ struct RootView: View {
     @State private var query: String = ""
     @State private var selectedID: String?
     @State private var errorMessage: String?
+    @State private var showingSetupOverride: Bool = false
     @FocusState private var searchFocused: Bool
 
     private var displayedRepos: [Repo] {
@@ -28,7 +29,7 @@ struct RootView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            if store.workspaceRoots.isEmpty {
+            if store.workspaceRoots.isEmpty || showingSetupOverride {
                 setupView
             } else {
                 mainView
@@ -65,6 +66,15 @@ struct RootView: View {
 
     private var setupView: some View {
         VStack(alignment: .leading, spacing: 12) {
+            if !store.workspaceRoots.isEmpty {
+                HStack {
+                    Spacer()
+                    Button("Done") {
+                        showingSetupOverride = false
+                    }
+                    .buttonStyle(.link)
+                }
+            }
             Text("Add workspace roots to scan repositories.")
                 .font(.callout)
                 .foregroundStyle(.secondary)
@@ -98,7 +108,8 @@ struct RootView: View {
 
                 if store.isScanning {
                     ProgressView()
-                        .scaleEffect(0.7)
+                        .controlSize(.small)
+                        .frame(width: 16, height: 16)
                 }
             }
         }
@@ -106,12 +117,18 @@ struct RootView: View {
 
     private var mainView: some View {
         VStack(alignment: .leading, spacing: 12) {
-            TextField("Search repositories…", text: $query)
-                .textFieldStyle(.roundedBorder)
-                .focused($searchFocused)
-                .onSubmit {
-                    openSelectedRepo()
+            HStack(spacing: 8) {
+                TextField("Search repositories…", text: $query)
+                    .textFieldStyle(.roundedBorder)
+                    .focused($searchFocused)
+                    .onSubmit {
+                        openSelectedRepo()
+                    }
+                Button("Roots…") {
+                    showingSetupOverride = true
                 }
+                .buttonStyle(.link)
+            }
 
             if let errorMessage {
                 Text(errorMessage)
@@ -129,10 +146,21 @@ struct RootView: View {
                 ScrollView {
                     LazyVStack(alignment: .leading, spacing: 6) {
                         if displayedRepos.isEmpty {
-                            Text("No repositories found.")
-                                .font(.callout)
-                                .foregroundStyle(.secondary)
-                                .padding(.vertical, 8)
+                            VStack(alignment: .leading, spacing: 8) {
+                                Text("No repositories found.")
+                                    .font(.callout)
+                                    .foregroundStyle(.secondary)
+                                HStack(spacing: 12) {
+                                    Button("Scan Repositories") {
+                                        store.rescan()
+                                    }
+                                    Button("Manage Roots…") {
+                                        showingSetupOverride = true
+                                    }
+                                    .buttonStyle(.link)
+                                }
+                            }
+                            .padding(.vertical, 8)
                         } else {
                             ForEach(displayedRepos) { repo in
                                 RepoRow(
@@ -216,7 +244,7 @@ struct RepoRow: View {
             Text(repo.name)
                 .font(.callout)
                 .foregroundStyle(.primary)
-            Text(repo.path)
+            Text(displayPath(repo.path))
                 .font(.caption2)
                 .foregroundStyle(.secondary)
                 .lineLimit(1)
@@ -236,6 +264,23 @@ struct RepoRow: View {
         .onTapGesture(count: 2) {
             onOpen()
         }
+    }
+
+    private func displayPath(_ path: String) -> String {
+        let homeDirectory = NSHomeDirectory()
+        let userHome = "/Users/\(NSUserName())"
+        let candidates = [homeDirectory, userHome]
+
+        for candidate in candidates {
+            if path == candidate {
+                return "~"
+            }
+            if path.hasPrefix(candidate + "/") {
+                let suffix = path.dropFirst(candidate.count)
+                return "~" + suffix
+            }
+        }
+        return path
     }
 }
 
