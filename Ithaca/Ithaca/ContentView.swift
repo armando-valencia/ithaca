@@ -192,23 +192,6 @@ struct RootView: View {
                 Text(hotkeyStore.hotkey?.displayString ?? "Off")
                     .font(.system(.caption, design: .monospaced))
                     .foregroundStyle(.secondary)
-                Button {
-                    showingShortcutHelp.toggle()
-                } label: {
-                    Image(systemName: "info.circle")
-                        .foregroundStyle(.secondary)
-                }
-                .buttonStyle(.plain)
-                .popover(isPresented: $showingShortcutHelp, arrowEdge: .bottom) {
-                    VStack(alignment: .leading, spacing: 6) {
-                        Text("Global Shortcut")
-                            .font(.callout)
-                        Text("Use control (⌃) + option (⌥) + command (⌘) + I.")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                    }
-                    .padding(10)
-                }
                 Spacer()
             }
 
