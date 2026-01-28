@@ -1,0 +1,7 @@
+.DS_Store
+DerivedData/
+*.xcuserstate
+*.xccheckout
+*.xcuserdata/
+Ithaca/Ithaca.xcodeproj/xcuserdata/
+Ithaca/Ithaca.xcodeproj/project.xcworkspace/xcuserdata/
