@@ -36,7 +36,9 @@ final class StatusBarController: NSObject, NSPopoverDelegate {
         )
 
         if let button = statusItem.button {
-            button.image = NSImage(systemSymbolName: "magnifyingglass", accessibilityDescription: "Ithaca")
+            let image = NSImage(systemSymbolName: "sailboat", accessibilityDescription: "Ithaca")
+                ?? NSImage(systemSymbolName: "location.north.circle", accessibilityDescription: "Ithaca")
+            button.image = image
             button.action = #selector(togglePopover)
             button.target = self
         }

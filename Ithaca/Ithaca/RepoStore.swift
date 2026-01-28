@@ -15,11 +15,13 @@ final class RepoStore: ObservableObject {
     @Published var isScanning: Bool = false
 
     private let rootsKey = "workspaceRoots"
+    private let rootsBookmarksKey = "workspaceRootBookmarks"
     private let ignoredDirectories: Set<String> = [
         "node_modules", ".venv", "dist", "build", ".tox", ".pytest_cache",
         ".mypy_cache", ".next", "target", ".gradle"
     ]
 
+    private var workspaceRootBookmarks: [String: Data] = [:]
     private let decoder: JSONDecoder
     private let encoder: JSONEncoder
 
@@ -30,6 +32,8 @@ final class RepoStore: ObservableObject {
         encoder.dateEncodingStrategy = .iso8601
         encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
         loadWorkspaceRoots()
+        loadWorkspaceRootBookmarks()
+        refreshWorkspaceRootBookmarks()
         loadCache()
     }
 
@@ -43,12 +47,15 @@ final class RepoStore: ObservableObject {
         guard !workspaceRoots.contains(path) else { return }
         workspaceRoots.append(path)
         saveWorkspaceRoots()
+        storeBookmark(for: path)
         rescan()
     }
 
     func removeWorkspaceRoot(_ path: String) {
         workspaceRoots.removeAll { $0 == path }
         saveWorkspaceRoots()
+        workspaceRootBookmarks.removeValue(forKey: path)
+        saveWorkspaceRootBookmarks()
         rescan()
     }
 
@@ -63,9 +70,10 @@ final class RepoStore: ObservableObject {
         isScanning = true
         let roots = workspaceRoots
         let existing = Dictionary(uniqueKeysWithValues: repos.map { ($0.id, $0) })
+        let bookmarks = workspaceRootBookmarks
 
         Task.detached(priority: .background) { [ignoredDirectories] in
-            let scanned = RepoStore.scan(roots: roots, ignored: ignoredDirectories)
+            let scanned = RepoStore.scan(roots: roots, ignored: ignoredDirectories, bookmarks: bookmarks)
             let merged = scanned.map { repo -> Repo in
                 if let prior = existing[repo.id] {
                     var updated = repo
@@ -107,8 +115,65 @@ final class RepoStore: ObservableObject {
         workspaceRoots = roots.filter { !$0.isEmpty }
     }
 
+    private func loadWorkspaceRootBookmarks() {
+        guard let raw = UserDefaults.standard.dictionary(forKey: rootsBookmarksKey) else { return }
+        var bookmarks: [String: Data] = [:]
+        for (key, value) in raw {
+            if let data = value as? Data {
+                bookmarks[key] = data
+            }
+        }
+        workspaceRootBookmarks = bookmarks
+    }
+
     private func saveWorkspaceRoots() {
         UserDefaults.standard.set(workspaceRoots, forKey: rootsKey)
+    }
+
+    private func saveWorkspaceRootBookmarks() {
+        UserDefaults.standard.set(workspaceRootBookmarks, forKey: rootsBookmarksKey)
+    }
+
+    private func storeBookmark(for path: String) {
+        let url = URL(fileURLWithPath: path)
+        do {
+            let data = try url.bookmarkData(options: [.withSecurityScope], includingResourceValuesForKeys: nil, relativeTo: nil)
+            workspaceRootBookmarks[path] = data
+            saveWorkspaceRootBookmarks()
+        } catch {
+            // If bookmark creation fails, keep path-only access.
+        }
+    }
+
+    private func refreshWorkspaceRootBookmarks() {
+        var updated: [String: Data] = workspaceRootBookmarks
+        var didUpdate = false
+
+        for root in workspaceRoots {
+            guard let data = workspaceRootBookmarks[root] else { continue }
+            var isStale = false
+            guard let resolved = try? URL(resolvingBookmarkData: data, options: [.withSecurityScope], relativeTo: nil, bookmarkDataIsStale: &isStale) else {
+                continue
+            }
+
+            if isStale {
+                let didStartAccessing = resolved.startAccessingSecurityScopedResource()
+                defer {
+                    if didStartAccessing {
+                        resolved.stopAccessingSecurityScopedResource()
+                    }
+                }
+                if let refreshed = try? resolved.bookmarkData(options: [.withSecurityScope], includingResourceValuesForKeys: nil, relativeTo: nil) {
+                    updated[root] = refreshed
+                    didUpdate = true
+                }
+            }
+        }
+
+        if didUpdate {
+            workspaceRootBookmarks = updated
+            saveWorkspaceRootBookmarks()
+        }
     }
 
     private func loadCache() {
@@ -142,18 +207,41 @@ final class RepoStore: ObservableObject {
         return (directory ?? URL(fileURLWithPath: "/tmp")).appendingPathComponent("index.json")
     }
 
-    nonisolated private static func scan(roots: [String], ignored: Set<String>) -> [Repo] {
+    nonisolated private static func scan(roots: [String], ignored: Set<String>, bookmarks: [String: Data]) -> [Repo] {
         var results: [Repo] = []
         var seen: Set<String> = []
         let fileManager = FileManager.default
 
         for root in roots {
+            var rootURL = URL(fileURLWithPath: root)
+            var didStartAccessing = false
+            if let data = bookmarks[root] {
+                var isStale = false
+                if let resolved = try? URL(resolvingBookmarkData: data, options: [.withSecurityScope], relativeTo: nil, bookmarkDataIsStale: &isStale) {
+                    rootURL = resolved
+                    didStartAccessing = resolved.startAccessingSecurityScopedResource()
+                }
+            }
+            defer {
+                if didStartAccessing {
+                    rootURL.stopAccessingSecurityScopedResource()
+                }
+            }
+
             var isDirectory: ObjCBool = false
-            guard fileManager.fileExists(atPath: root, isDirectory: &isDirectory), isDirectory.boolValue else {
+            guard fileManager.fileExists(atPath: rootURL.path, isDirectory: &isDirectory), isDirectory.boolValue else {
                 continue
             }
 
-            let rootURL = URL(fileURLWithPath: root)
+            let rootGitURL = rootURL.appendingPathComponent(".git")
+            var isRootGitDirectory: ObjCBool = false
+            if fileManager.fileExists(atPath: rootGitURL.path, isDirectory: &isRootGitDirectory) {
+                let repo = Repo(name: rootURL.lastPathComponent, path: rootURL.path)
+                if seen.insert(repo.id).inserted {
+                    results.append(repo)
+                }
+            }
+
             guard let enumerator = fileManager.enumerator(
                 at: rootURL,
                 includingPropertiesForKeys: [.isDirectoryKey],
@@ -171,7 +259,7 @@ final class RepoStore: ObservableObject {
 
                 let gitURL = url.appendingPathComponent(".git")
                 var isGitDirectory: ObjCBool = false
-                if fileManager.fileExists(atPath: gitURL.path, isDirectory: &isGitDirectory), isGitDirectory.boolValue {
+                if fileManager.fileExists(atPath: gitURL.path, isDirectory: &isGitDirectory) {
                     let repoName = url.lastPathComponent
                     let repo = Repo(name: repoName, path: url.path)
                     if seen.insert(repo.id).inserted {
