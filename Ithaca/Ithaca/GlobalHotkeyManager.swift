@@ -37,7 +37,9 @@ final class GlobalHotkeyManager {
         let handler: EventHandlerUPP = { _, _, userData in
             guard let userData else { return noErr }
             let manager = Unmanaged<GlobalHotkeyManager>.fromOpaque(userData).takeUnretainedValue()
-            manager.onTrigger()
+            DispatchQueue.main.async {
+                manager.onTrigger()
+            }
             return noErr
         }
         InstallEventHandler(
