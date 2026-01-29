@@ -63,7 +63,16 @@ struct RootView: View {
         .onChange(of: popoverState.isShown) { _, isShown in
             if isShown {
                 searchFocused = true
+                updateBranchesIfNeeded()
             }
+        }
+        .onChange(of: popoverState.focusRequestID) { _, _ in
+            DispatchQueue.main.async {
+                searchFocused = true
+            }
+        }
+        .onChange(of: store.showBranches) { _, _ in
+            updateBranchesIfNeeded()
         }
         .onAppear {
             if selectedID == nil {
