@@ -132,7 +132,7 @@ final class StatusBarController: NSObject, NSPopoverDelegate {
         guard let screen else { return }
 
         let contentSize = NSSize(width: 420, height: 520)
-        let styleMask: NSWindow.StyleMask = [.titled, .fullSizeContentView]
+        let styleMask: NSWindow.StyleMask = [.titled, .closable, .fullSizeContentView]
         let contentRect = NSRect(origin: .zero, size: contentSize)
         let frameRect = NSWindow.frameRect(forContentRect: contentRect, styleMask: styleMask)
         let origin = NSPoint(
