@@ -131,6 +131,17 @@ final class RepoStore: ObservableObject {
         saveIndex()
     }
 
+    func isPathAllowed(_ path: String) -> Bool {
+        let candidate = URL(fileURLWithPath: path).standardizedFileURL.path
+        for root in workspaceRoots {
+            let rootPath = URL(fileURLWithPath: root).standardizedFileURL.path
+            if candidate == rootPath || candidate.hasPrefix(rootPath + "/") {
+                return true
+            }
+        }
+        return false
+    }
+
     func recentRepos() -> [Repo] {
         repos
             .compactMap { $0.lastOpened == nil ? nil : $0 }
