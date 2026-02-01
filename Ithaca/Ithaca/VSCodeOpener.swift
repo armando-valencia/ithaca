@@ -6,6 +6,7 @@
 //
 
 import Foundation
+import AppKit
 
 enum OpenTargetError: LocalizedError {
     case failed(target: OpenTarget)
@@ -79,7 +80,6 @@ struct OpenTargetOpener {
         return .failure(.failed(target: .finder))
     }
 
- 
 }
 
 struct ProcessResult {
