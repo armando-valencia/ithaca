@@ -401,6 +401,10 @@ struct RootView: View {
 
     private func openRepo(_ repo: Repo, targetOverride: OpenTarget?) {
         errorMessage = nil
+        guard store.isPathAllowed(repo.path) else {
+            errorMessage = "Repository path is outside configured directories."
+            return
+        }
         Task {
             let target = targetOverride ?? store.defaultOpenTarget
             let result = await OpenTargetOpener.open(target: target, path: repo.path)
@@ -408,6 +412,7 @@ struct RootView: View {
             case .success:
                 await MainActor.run {
                     store.markOpened(repoID: repo.id)
+                    onRequestClose()
                 }
             case .failure(let error):
                 await MainActor.run {
