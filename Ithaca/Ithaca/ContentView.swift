@@ -23,6 +23,7 @@ struct RootView: View {
     @State private var showingSetupOverride: Bool = false
     @State private var showingShortcutHelp: Bool = false
     @State private var showingSettings: Bool = false
+    @State private var hasInteracted: Bool = false
     @FocusState private var searchFocused: Bool
     @State private var keyMonitor: Any?
 
@@ -62,6 +63,7 @@ struct RootView: View {
         .frame(width: 420, height: 520, alignment: .top)
         .onChange(of: popoverState.isShown) { _, isShown in
             if isShown {
+                hasInteracted = false
                 searchFocused = true
                 updateBranchesIfNeeded()
             }
@@ -105,6 +107,7 @@ struct RootView: View {
         }
         .onChange(of: query) { _, _ in
             errorMessage = nil
+            hasInteracted = true
         }
         .onChange(of: displayedRepos.map { $0.id }) { _, _ in
             if let selectedID, displayedRepos.contains(where: { $0.id == selectedID }) {
@@ -162,7 +165,7 @@ struct RootView: View {
                 Button("Add Directory…") {
                     chooseWorkspaceRoot()
                 }
-                Button("Scan Repositories") {
+                Button("Rescan") {
                     store.rescan()
                 }
                 .disabled(store.workspaceRoots.isEmpty)
@@ -179,7 +182,7 @@ struct RootView: View {
     }
 
     private var mainView: some View {
-        VStack(alignment: .leading, spacing: 12) {
+        VStack(alignment: .leading, spacing: 10) {
             HStack(spacing: 8) {
                 TextField("Search repositories…", text: $query)
                     .textFieldStyle(.roundedBorder)
@@ -213,13 +216,42 @@ struct RootView: View {
                         .padding(12)
                 }
             }
+            if !hasInteracted {
+                Text("↑↓ to navigate · Enter to open")
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+                    .transition(.opacity)
+            }
             HStack(spacing: 8) {
-                Text("Shortcut:")
+                Text("Shortcut")
                     .font(.caption)
                     .foregroundStyle(.secondary)
                 Text(hotkeyStore.hotkey?.displayString ?? "Off")
-                    .font(.system(.caption, design: .monospaced))
+                    .font(.system(.caption2, design: .monospaced))
                     .foregroundStyle(.secondary)
+                    .padding(.horizontal, 6)
+                    .padding(.vertical, 2)
+                    .background(
+                        RoundedRectangle(cornerRadius: 6)
+                            .fill(Color.secondary.opacity(0.15))
+                    )
+                Button {
+                    showingShortcutHelp.toggle()
+                } label: {
+                    Image(systemName: "info.circle")
+                        .foregroundStyle(.secondary)
+                }
+                .buttonStyle(.plain)
+                .popover(isPresented: $showingShortcutHelp, arrowEdge: .bottom) {
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text("Global Shortcut")
+                            .font(.callout)
+                        Text("Use ⌃⌥⌘I (letter I, not lowercase L).")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                    .padding(10)
+                }
                 Spacer()
             }
 
@@ -233,21 +265,20 @@ struct RootView: View {
                 ScrollView {
                     LazyVStack(alignment: .leading, spacing: 6) {
                         if displayedRepos.isEmpty {
-                            VStack(alignment: .leading, spacing: 8) {
-                                Text("No repositories found.")
+                            HStack(spacing: 10) {
+                                Text("No matches.")
                                     .font(.callout)
                                     .foregroundStyle(.secondary)
-                                HStack(spacing: 12) {
-                                    Button("Scan Repositories") {
-                                        store.rescan()
-                                    }
-                                    Button("Manage Directories…") {
-                                        showingSetupOverride = true
-                                    }
-                                    .buttonStyle(.link)
+                                Button("Rescan") {
+                                    store.rescan()
                                 }
+                                Button("Directories…") {
+                                    showingSetupOverride = true
+                                }
+                                .buttonStyle(.link)
+                                Spacer()
                             }
-                            .padding(.vertical, 8)
+                            .padding(.vertical, 6)
                         } else {
                             if isSearching {
                                 ForEach(displayedRepos) { repo in
@@ -265,12 +296,10 @@ struct RootView: View {
                                         onTogglePin: { store.togglePin(repoID: repo.id) },
                                         onOpenWith: { target in openRepo(repo, targetOverride: target) }
                                     )
-                            }
+                                }
                             } else {
                                 if !pinnedRepos.isEmpty {
-                                    Text("Pinned")
-                                        .font(.caption)
-                                        .foregroundStyle(.secondary)
+                                    sectionHeader("Pinned")
                                 }
                                 ForEach(pinnedRepos) { repo in
                                     RepoRow(
@@ -289,9 +318,7 @@ struct RootView: View {
                                     )
                                 }
                                 if !recentRepos.isEmpty {
-                                    Text("Recent")
-                                        .font(.caption)
-                                        .foregroundStyle(.secondary)
+                                    sectionHeader("Recent")
                                 }
                                 ForEach(recentRepos) { repo in
                                     RepoRow(
@@ -316,12 +343,14 @@ struct RootView: View {
                 }
             }
         }
+        .animation(.easeOut(duration: 0.2), value: hasInteracted)
     }
 
     private var settingsView: some View {
         VStack(alignment: .leading, spacing: 12) {
             Text("Settings")
-                .font(.callout)
+                .font(.caption)
+                .foregroundStyle(.secondary)
             Toggle(isOn: Binding(
                 get: { store.showBranches },
                 set: { store.updateShowBranches($0) }
@@ -344,12 +373,19 @@ struct RootView: View {
                             .font(.caption)
                             .lineLimit(1)
                             .truncationMode(.middle)
+                            .padding(.horizontal, 6)
+                            .padding(.vertical, 4)
+                            .background(
+                                RoundedRectangle(cornerRadius: 6)
+                                    .fill(Color.secondary.opacity(0.12))
+                            )
                         Spacer()
                         Button("Remove") {
                             store.removeWorkspaceRoot(root)
                         }
                         .buttonStyle(.link)
                         .font(.caption)
+                        .foregroundStyle(.secondary)
                     }
                 }
             }
@@ -358,7 +394,7 @@ struct RootView: View {
                 Button("Add Directory…") {
                     chooseWorkspaceRoot()
                 }
-                Button("Scan Repositories") {
+                Button("Rescan") {
                     store.rescan()
                 }
                 .disabled(store.workspaceRoots.isEmpty)
@@ -374,8 +410,21 @@ struct RootView: View {
         }
     }
 
+    private func sectionHeader(_ title: String) -> some View {
+        HStack(spacing: 8) {
+            Text(title)
+                .font(.caption)
+                .foregroundStyle(.secondary)
+            Rectangle()
+                .fill(Color.secondary.opacity(0.2))
+                .frame(height: 1)
+        }
+        .padding(.top, 4)
+    }
+
     private func moveSelection(_ direction: MoveCommandDirection) {
         guard !displayedRepos.isEmpty else { return }
+        hasInteracted = true
         guard let currentID = selectedID,
               let currentIndex = displayedRepos.firstIndex(where: { $0.id == currentID }) else {
             selectedID = displayedRepos.first?.id
@@ -395,6 +444,7 @@ struct RootView: View {
     }
 
     private func openSelectedRepo() {
+        hasInteracted = true
         guard let repo = displayedRepos.first(where: { $0.id == selectedID }) else { return }
         openRepo(repo, targetOverride: nil)
     }
@@ -448,6 +498,9 @@ struct RootView: View {
 
         if panel.runModal() == .OK, let url = panel.url {
             store.addWorkspaceRoot(url.path)
+            showingSetupOverride = false
+            showingSettings = false
+            searchFocused = true
         }
     }
 
@@ -481,6 +534,11 @@ struct RepoRow: View {
                             .foregroundStyle(.secondary)
                     }
                     Spacer(minLength: 0)
+                    if isHovered {
+                        Image(systemName: "arrow.up.right")
+                            .font(.caption2)
+                            .foregroundStyle(.secondary)
+                    }
                 }
                 HStack(spacing: 6) {
                     Text(displayPath(repo.path))
@@ -491,7 +549,7 @@ struct RepoRow: View {
                     if showBranch, let branch {
                         Text("• \(branch)")
                             .font(.caption2)
-                            .foregroundStyle(Color.secondary.opacity(0.75))
+                            .foregroundStyle(Color.secondary.opacity(0.65))
                             .lineLimit(1)
                     }
                     Spacer(minLength: 0)
@@ -499,10 +557,14 @@ struct RepoRow: View {
             }
             .padding(.vertical, 6)
             .padding(.horizontal, 8)
-            .frame(maxWidth: .infinity, alignment: .leading)
+            .frame(maxWidth: .infinity, minHeight: 46, alignment: .leading)
             .background(
-                RoundedRectangle(cornerRadius: 6)
-                    .fill((isSelected || isHovered) ? Color.accentColor.opacity(0.15) : Color.clear)
+                RoundedRectangle(cornerRadius: 8)
+                    .fill(isSelected ? Color.accentColor.opacity(0.12) : isHovered ? Color.accentColor.opacity(0.06) : Color.clear)
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 8)
+                    .stroke(isSelected ? Color.accentColor.opacity(0.35) : Color.clear, lineWidth: 1)
             )
             .contentShape(Rectangle())
         }
