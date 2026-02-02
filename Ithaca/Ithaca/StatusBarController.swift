@@ -23,6 +23,7 @@ final class StatusBarController: NSObject, NSPopoverDelegate {
     private let popover: NSPopover
     private let popoverState: PopoverState
     private var panel: NSPanel?
+    private var panelIsShown: Bool = false
     private let store: RepoStore
     private let hotkeyStore: HotkeyStore
 
@@ -49,7 +50,7 @@ final class StatusBarController: NSObject, NSPopoverDelegate {
     }
 
     @objc private func togglePopover() {
-        if popover.isShown || panel?.isVisible == true {
+        if popover.isShown || panelIsShown {
             closePopover()
         } else {
             showPopover()
@@ -57,7 +58,7 @@ final class StatusBarController: NSObject, NSPopoverDelegate {
     }
 
     func togglePopoverFromHotkey() {
-        if panel?.isVisible == true {
+        if panelIsShown {
             closePopover()
         } else {
             showPanel(for: activeScreen())
@@ -81,6 +82,7 @@ final class StatusBarController: NSObject, NSPopoverDelegate {
         panel?.orderOut(nil)
         NSApp.setActivationPolicy(.accessory)
         popoverState.isShown = false
+        panelIsShown = false
     }
 
     func popoverDidClose(_ notification: Notification) {
@@ -151,18 +153,19 @@ final class StatusBarController: NSObject, NSPopoverDelegate {
                 defer: false
             )
             panel.titleVisibility = .hidden
-            panel.titlebarAppearsTransparent = true
+            panel.titlebarAppearsTransparent = false
             panel.isMovableByWindowBackground = false
             panel.isFloatingPanel = true
             panel.level = .floating
             panel.becomesKeyOnlyIfNeeded = false
             panel.hidesOnDeactivate = false
             panel.collectionBehavior = [.moveToActiveSpace, .fullScreenAuxiliary]
-            panel.standardWindowButton(.closeButton)?.isHidden = true
             panel.standardWindowButton(.miniaturizeButton)?.isHidden = true
             panel.standardWindowButton(.zoomButton)?.isHidden = true
             panel.isReleasedWhenClosed = false
             panel.contentViewController = makeHostingController()
+            panel.delegate = self
+            panel.standardWindowButton(.closeButton)?.isHidden = false
             self.panel = panel
         }
 
@@ -173,6 +176,7 @@ final class StatusBarController: NSObject, NSPopoverDelegate {
         NSApp.activate(ignoringOtherApps: true)
         popoverState.isShown = true
         popoverState.requestFocus()
+        panelIsShown = true
         DispatchQueue.main.async { [weak self] in
             guard let self, let panel = self.panel else { return }
             panel.makeKeyAndOrderFront(nil)
@@ -181,5 +185,13 @@ final class StatusBarController: NSObject, NSPopoverDelegate {
             NSApp.activate(ignoringOtherApps: true)
             self.popoverState.requestFocus()
         }
+    }
+}
+
+extension StatusBarController: NSWindowDelegate {
+    func windowWillClose(_ notification: Notification) {
+        panelIsShown = false
+        popoverState.isShown = false
+        NSApp.setActivationPolicy(.accessory)
     }
 }
