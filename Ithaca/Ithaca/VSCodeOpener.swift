@@ -92,23 +92,17 @@ enum ProcessRunner {
     static func run(executable: String, arguments: [String]) async -> ProcessResult {
         await withCheckedContinuation { continuation in
             let process = Process()
-            let stdoutPipe = Pipe()
-            let stderrPipe = Pipe()
 
             process.executableURL = URL(fileURLWithPath: executable)
             process.arguments = arguments
-            process.standardOutput = stdoutPipe
-            process.standardError = stderrPipe
+            process.standardOutput = FileHandle.nullDevice
+            process.standardError = FileHandle.nullDevice
 
             process.terminationHandler = { process in
-                let stdoutData = stdoutPipe.fileHandleForReading.readDataToEndOfFile()
-                let stderrData = stderrPipe.fileHandleForReading.readDataToEndOfFile()
-                let stdout = String(data: stdoutData, encoding: .utf8) ?? ""
-                let stderr = String(data: stderrData, encoding: .utf8) ?? ""
                 continuation.resume(returning: ProcessResult(
                     exitCode: process.terminationStatus,
-                    stdout: stdout,
-                    stderr: stderr
+                    stdout: "",
+                    stderr: ""
                 ))
             }
 
