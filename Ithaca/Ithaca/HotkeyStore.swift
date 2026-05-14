@@ -28,9 +28,27 @@ struct Hotkey: Codable, Equatable, Sendable {
     }
 }
 
+enum HotkeyRegistrationStatus: Equatable {
+    case disabled
+    case registered
+    case unavailable
+
+    var label: String {
+        switch self {
+        case .disabled:
+            return "Off"
+        case .registered:
+            return "Active"
+        case .unavailable:
+            return "Unavailable"
+        }
+    }
+}
+
 @MainActor
 final class HotkeyStore: ObservableObject {
     @Published private(set) var hotkey: Hotkey?
+    @Published private(set) var registrationStatus: HotkeyRegistrationStatus = .disabled
 
     private let hotkeyKey = "globalHotkey"
     private let defaultHotkey = Hotkey(
@@ -51,6 +69,10 @@ final class HotkeyStore: ObservableObject {
     func setHotkey(_ hotkey: Hotkey?) {
         self.hotkey = hotkey
         save()
+    }
+
+    func setRegistrationStatus(_ status: HotkeyRegistrationStatus) {
+        registrationStatus = status
     }
 
     private func load() {

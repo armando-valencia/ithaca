@@ -42,7 +42,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
         hotkeyStore.$hotkey
             .sink { [weak self] hotkey in
-                self?.hotkeyManager?.update(hotkey: hotkey)
+                guard let self else { return }
+                let status = hotkeyManager?.update(hotkey: hotkey) ?? .unavailable
+                hotkeyStore.setRegistrationStatus(status)
             }
             .store(in: &cancellables)
     }

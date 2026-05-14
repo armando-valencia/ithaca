@@ -12,6 +12,7 @@ final class GlobalHotkeyManager {
     private let onTrigger: () -> Void
     private var hotKeyRef: EventHotKeyRef?
     private var handlerRef: EventHandlerRef?
+    private var isHandlerInstalled = false
     private let hotKeyID = EventHotKeyID(signature: OSType(UInt32(0x49544843)), id: 1)
 
     init(onTrigger: @escaping () -> Void) {
@@ -26,10 +27,11 @@ final class GlobalHotkeyManager {
         }
     }
 
-    func update(hotkey: Hotkey?) {
+    func update(hotkey: Hotkey?) -> HotkeyRegistrationStatus {
         unregister()
-        guard let hotkey else { return }
-        register(hotkey: hotkey)
+        guard let hotkey else { return .disabled }
+        guard isHandlerInstalled else { return .unavailable }
+        return register(hotkey: hotkey)
     }
 
     private func installHandler() {
@@ -42,27 +44,29 @@ final class GlobalHotkeyManager {
             }
             return noErr
         }
-        InstallEventHandler(
+        isHandlerInstalled = InstallEventHandler(
             GetEventDispatcherTarget(),
             handler,
             1,
             &eventSpec,
             UnsafeMutableRawPointer(Unmanaged.passUnretained(self).toOpaque()),
             &handlerRef
-        )
+        ) == noErr
     }
 
-    private func register(hotkey: Hotkey) {
-        let keyCode = hotkey.keyCode
-        let modifiers = hotkey.modifiers
-        RegisterEventHotKey(
-            keyCode,
-            modifiers,
+    private func register(hotkey: Hotkey) -> HotkeyRegistrationStatus {
+        var registeredHotKey: EventHotKeyRef?
+        let status = RegisterEventHotKey(
+            hotkey.keyCode,
+            hotkey.modifiers,
             hotKeyID,
             GetEventDispatcherTarget(),
             0,
-            &hotKeyRef
+            &registeredHotKey
         )
+        guard status == noErr, let registeredHotKey else { return .unavailable }
+        hotKeyRef = registeredHotKey
+        return .registered
     }
 
     private func unregister() {
