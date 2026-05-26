@@ -6,7 +6,6 @@
 //
 
 import Foundation
-import AppKit
 
 enum OpenTargetError: LocalizedError {
     case failed(target: OpenTarget)
@@ -84,8 +83,6 @@ struct OpenTargetOpener {
 
 struct ProcessResult {
     let exitCode: Int32
-    let stdout: String
-    let stderr: String
 }
 
 enum ProcessRunner {
@@ -100,16 +97,14 @@ enum ProcessRunner {
 
             process.terminationHandler = { process in
                 continuation.resume(returning: ProcessResult(
-                    exitCode: process.terminationStatus,
-                    stdout: "",
-                    stderr: ""
+                    exitCode: process.terminationStatus
                 ))
             }
 
             do {
                 try process.run()
             } catch {
-                continuation.resume(returning: ProcessResult(exitCode: 1, stdout: "", stderr: error.localizedDescription))
+                continuation.resume(returning: ProcessResult(exitCode: 1))
             }
         }
     }
