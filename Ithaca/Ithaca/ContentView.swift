@@ -61,19 +61,19 @@ struct RootView: View {
         }
         .padding(14)
         .frame(width: 420, height: 520, alignment: .top)
-        .onChange(of: popoverState.isShown) { isShown in
+        .onChange(of: popoverState.isShown) { _, isShown in
             if isShown {
                 hasInteracted = false
                 searchFocused = true
                 updateBranchesIfNeeded()
             }
         }
-        .onChange(of: popoverState.focusRequestID) { _ in
+        .onChange(of: popoverState.focusRequestID) { _, _ in
             DispatchQueue.main.async {
                 searchFocused = true
             }
         }
-        .onChange(of: store.showBranches) { _ in
+        .onChange(of: store.showBranches) { _, _ in
             updateBranchesIfNeeded()
         }
         .onAppear {
@@ -105,21 +105,21 @@ struct RootView: View {
                 self.keyMonitor = nil
             }
         }
-        .onChange(of: query) { _ in
+        .onChange(of: query) { _, _ in
             errorMessage = nil
             hasInteracted = true
         }
-        .onChange(of: displayedRepos.map { $0.id }) { _ in
+        .onChange(of: displayedRepos.map { $0.id }) { _, _ in
             if let selectedID, displayedRepos.contains(where: { $0.id == selectedID }) {
                 return
             }
             selectedID = displayedRepos.first?.id
             updateBranchesIfNeeded()
         }
-        .onChange(of: store.repos.map { $0.id }) { _ in
+        .onChange(of: store.repos.map { $0.id }) { _, _ in
             updateBranchesIfNeeded()
         }
-        .onChange(of: query) { _ in
+        .onChange(of: query) { _, _ in
             updateBranchesIfNeeded()
         }
         .onMoveCommand { direction in
