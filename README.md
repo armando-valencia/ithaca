@@ -6,7 +6,7 @@ Ithaca is a macOS menu bar app for instantly searching local git repositories an
 
 - Open `Ithaca/Ithaca.xcodeproj` in Xcode.
 - Select the `Ithaca` scheme.
-- Run the app (macOS 13+).
+- Run the app (macOS 26.2+).
 
   > From Xcode, you can just run cmd+R to build and run the project.
 
