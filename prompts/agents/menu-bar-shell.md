@@ -42,4 +42,4 @@ SKILLS
 
 - frontend-design (mandatory)
 
-You must apply the frontend-design skill when constructing or adjusting any UI. This skills lives in a directory at the root of the repo called `promots/skills`.
+You must apply the frontend-design skill when constructing or adjusting any UI. This skill lives in `prompts/skills` at the repository root.
