@@ -30,16 +30,27 @@ enum GitBranchProvider {
             if let contents = readTrimmedHead(from: dotGitURL),
                contents.hasPrefix("gitdir: ") {
                 let path = contents.replacingOccurrences(of: "gitdir: ", with: "").trimmingCharacters(in: .whitespaces)
+                guard !path.isEmpty else { return nil }
                 let gitDirURL: URL = path.hasPrefix("/")
                     ? URL(fileURLWithPath: path).standardizedFileURL
                     : repoURL.appendingPathComponent(path).standardizedFileURL
-                guard gitDirURL.path.hasPrefix(repoURL.path + "/") else {
-                    return nil
-                }
-                return gitDirURL
+                return isGitDirectory(gitDirURL) ? gitDirURL : nil
             }
         }
         return nil
+    }
+
+    private static func isGitDirectory(_ url: URL) -> Bool {
+        var isDirectory: ObjCBool = false
+        guard FileManager.default.fileExists(atPath: url.path, isDirectory: &isDirectory), isDirectory.boolValue else {
+            return false
+        }
+
+        var isHeadDirectory: ObjCBool = false
+        return FileManager.default.fileExists(
+            atPath: url.appendingPathComponent("HEAD").path,
+            isDirectory: &isHeadDirectory
+        ) && !isHeadDirectory.boolValue
     }
 
     private static func readTrimmedHead(from url: URL) -> String? {
