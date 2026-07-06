@@ -19,7 +19,11 @@ WORKSPACE ROOTS
 
 REPO RULES
 
-- A repo is a directory containing a `.git` directory or a valid `.git` file for a linked worktree
+- A repo is a directory containing a valid `.git` directory or a valid `.git` file for a linked worktree
+- A `.git` directory must contain a `HEAD` file
+- A linked-worktree `.git` file must point to a Git directory containing a `HEAD` file
+- Scan recursively but do not traverse hidden descendant directories
+- Bare repositories are not supported
 - Ignore directories:
   node_modules, .venv, dist, build, .tox, .pytest_cache,
   .mypy_cache, .next, target, .gradle

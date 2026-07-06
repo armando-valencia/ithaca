@@ -376,9 +376,7 @@ final class RepoStore: ObservableObject {
                 continue
             }
 
-            let rootGitURL = rootURL.appendingPathComponent(".git")
-            var isRootGitDirectory: ObjCBool = false
-            if fileManager.fileExists(atPath: rootGitURL.path, isDirectory: &isRootGitDirectory) {
+            if GitRepository.isRepository(at: rootURL) {
                 let repo = Repo(
                     name: rootURL.lastPathComponent,
                     path: rootURL.path
@@ -404,9 +402,7 @@ final class RepoStore: ObservableObject {
                     continue
                 }
 
-                let gitURL = url.appendingPathComponent(".git")
-                var isGitDirectory: ObjCBool = false
-                if fileManager.fileExists(atPath: gitURL.path, isDirectory: &isGitDirectory) {
+                if GitRepository.isRepository(at: url) {
                     let repoName = url.lastPathComponent
                     let repo = Repo(
                         name: repoName,
