@@ -51,6 +51,7 @@ final class HotkeyStore: ObservableObject {
     @Published private(set) var registrationStatus: HotkeyRegistrationStatus = .disabled
 
     private let hotkeyKey = "globalHotkey"
+    private let hotkeyDisabledKey = "globalHotkeyDisabled"
     private let defaultHotkey = Hotkey(
         keyCode: UInt32(kVK_ANSI_I),
         modifiers: UInt32(cmdKey | optionKey | controlKey),
@@ -61,14 +62,19 @@ final class HotkeyStore: ObservableObject {
 
     init() {
         load()
-        if hotkey == nil {
+        if hotkey == nil && !isHotkeyDisabled {
             setHotkey(defaultHotkey)
         }
     }
 
     func setHotkey(_ hotkey: Hotkey?) {
         self.hotkey = hotkey
+        UserDefaults.standard.set(hotkey == nil, forKey: hotkeyDisabledKey)
         save()
+    }
+
+    func restoreDefaultHotkey() {
+        setHotkey(defaultHotkey)
     }
 
     func setRegistrationStatus(_ status: HotkeyRegistrationStatus) {
@@ -81,6 +87,10 @@ final class HotkeyStore: ObservableObject {
             return
         }
         self.hotkey = hotkey
+    }
+
+    private var isHotkeyDisabled: Bool {
+        UserDefaults.standard.bool(forKey: hotkeyDisabledKey)
     }
 
     private func save() {
