@@ -35,6 +35,11 @@ Run the test suite from the command line with:
 xcodebuild -project Ithaca/Ithaca.xcodeproj -scheme Ithaca test
 ```
 
+## Continuous Integration
+
+GitHub Actions runs the same test suite for pull requests into `develop` and
+pushes to `develop`. The workflow is defined in `.github/workflows/ci.yml`.
+
 <details>
 <summary>Repository discovery and saved data</summary>
 
