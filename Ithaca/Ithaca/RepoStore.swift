@@ -342,7 +342,7 @@ final class RepoStore: ObservableObject {
         replaceScanIssues(with: issues.filter { $0.id.hasPrefix("root-") })
     }
 
-    nonisolated private static func scan(roots: [String], ignored: Set<String>, bookmarks: [String: Data]) -> (repos: [Repo], issues: [RepoStoreIssue]) {
+    nonisolated static func scan(roots: [String], ignored: Set<String>, bookmarks: [String: Data]) -> (repos: [Repo], issues: [RepoStoreIssue]) {
         var results: [Repo] = []
         var issues: [RepoStoreIssue] = []
         var seen: Set<String> = []

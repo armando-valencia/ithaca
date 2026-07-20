@@ -8,6 +8,7 @@
 
 /* Begin PBXFileReference section */
 		287C24D92F2865D50060B7C0 /* Ithaca.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Ithaca.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		A10000000000000000000001 /* IthacaTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = IthacaTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -16,10 +17,22 @@
 			path = Ithaca;
 			sourceTree = "<group>";
 		};
+		A10000000000000000000002 /* IthacaTests */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = IthacaTests;
+			sourceTree = "<group>";
+		};
 /* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
 		287C24D62F2865D50060B7C0 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		A10000000000000000000003 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -33,6 +46,7 @@
 			isa = PBXGroup;
 			children = (
 				287C24DB2F2865D50060B7C0 /* Ithaca */,
+				A10000000000000000000002 /* IthacaTests */,
 				287C24DA2F2865D50060B7C0 /* Products */,
 			);
 			sourceTree = "<group>";
@@ -41,11 +55,22 @@
 			isa = PBXGroup;
 			children = (
 				287C24D92F2865D50060B7C0 /* Ithaca.app */,
+				A10000000000000000000001 /* IthacaTests.xctest */,
 			);
 			name = Products;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
+
+/* Begin PBXContainerItemProxy section */
+		A10000000000000000000004 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 287C24D12F2865D50060B7C0 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 287C24D82F2865D50060B7C0;
+			remoteInfo = Ithaca;
+		};
+/* End PBXContainerItemProxy section */
 
 /* Begin PBXNativeTarget section */
 		287C24D82F2865D50060B7C0 /* Ithaca */ = {
@@ -70,7 +95,37 @@
 			productReference = 287C24D92F2865D50060B7C0 /* Ithaca.app */;
 			productType = "com.apple.product-type.application";
 		};
+		A10000000000000000000005 /* IthacaTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = A10000000000000000000006 /* Build configuration list for PBXNativeTarget "IthacaTests" */;
+			buildPhases = (
+				A10000000000000000000007 /* Sources */,
+				A10000000000000000000003 /* Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				A10000000000000000000008 /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				A10000000000000000000002 /* IthacaTests */,
+			);
+			name = IthacaTests;
+			packageProductDependencies = (
+			);
+			productName = IthacaTests;
+			productReference = A10000000000000000000001 /* IthacaTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
 /* End PBXNativeTarget section */
+
+/* Begin PBXTargetDependency section */
+		A10000000000000000000008 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 287C24D82F2865D50060B7C0 /* Ithaca */;
+			targetProxy = A10000000000000000000004 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
 
 /* Begin PBXProject section */
 		287C24D12F2865D50060B7C0 /* Project object */ = {
@@ -82,6 +137,10 @@
 				TargetAttributes = {
 					287C24D82F2865D50060B7C0 = {
 						CreatedOnToolsVersion = 26.2;
+					};
+					A10000000000000000000005 = {
+						CreatedOnToolsVersion = 26.2;
+						TestTargetID = 287C24D82F2865D50060B7C0;
 					};
 				};
 			};
@@ -100,6 +159,7 @@
 			projectRoot = "";
 			targets = (
 				287C24D82F2865D50060B7C0 /* Ithaca */,
+				A10000000000000000000005 /* IthacaTests */,
 			);
 		};
 /* End PBXProject section */
@@ -116,6 +176,13 @@
 
 /* Begin PBXSourcesBuildPhase section */
 		287C24D52F2865D50060B7C0 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		A10000000000000000000007 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -305,6 +372,34 @@
 			};
 			name = Release;
 		};
+		A10000000000000000000009 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				GENERATE_INFOPLIST_FILE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 26.2;
+				PRODUCT_BUNDLE_IDENTIFIER = armandovalencia.IthacaTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_VERSION = 5.0;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Ithaca.app/Contents/MacOS/Ithaca";
+			};
+			name = Debug;
+		};
+		A10000000000000000000010 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				GENERATE_INFOPLIST_FILE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 26.2;
+				PRODUCT_BUNDLE_IDENTIFIER = armandovalencia.IthacaTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_VERSION = 5.0;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Ithaca.app/Contents/MacOS/Ithaca";
+			};
+			name = Release;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -322,6 +417,15 @@
 			buildConfigurations = (
 				287C24E52F2865D70060B7C0 /* Debug */,
 				287C24E62F2865D70060B7C0 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		A10000000000000000000006 /* Build configuration list for PBXNativeTarget "IthacaTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				A10000000000000000000009 /* Debug */,
+				A10000000000000000000010 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
