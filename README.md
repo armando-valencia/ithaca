@@ -1,6 +1,6 @@
 # Ithaca
 
-Ithaca is a macOS menu bar app for instantly searching local git repositories and opening them in Visual Studio Code.
+Ithaca is a macOS app for instantly searching local git repositories and opening them in Visual Studio Code.
 
 ## Build & Run
 
