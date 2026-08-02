@@ -19,7 +19,7 @@ WORKSPACE ROOTS
 
 REPO RULES
 
-- A repo is a directory containing a `.git` directory
+- A repo is a directory containing a `.git` directory or a valid `.git` file for a linked worktree
 - Ignore directories:
   node_modules, .venv, dist, build, .tox, .pytest_cache,
   .mypy_cache, .next, target, .gradle
