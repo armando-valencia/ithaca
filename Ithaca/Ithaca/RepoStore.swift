@@ -122,12 +122,26 @@ final class RepoStore: ObservableObject {
     func isPathAllowed(_ path: String) -> Bool {
         let candidate = URL(fileURLWithPath: path).standardizedFileURL.path
         for root in workspaceRoots {
-            let rootPath = URL(fileURLWithPath: root).standardizedFileURL.path
+            let rootPath = resolvedWorkspaceRootURL(for: root).path
             if candidate == rootPath || candidate.hasPrefix(rootPath + "/") {
                 return true
             }
         }
         return false
+    }
+
+    private func resolvedWorkspaceRootURL(for root: String) -> URL {
+        guard let data = workspaceRootBookmarks[root] else {
+            return URL(fileURLWithPath: root).standardizedFileURL
+        }
+
+        var isStale = false
+        return (try? URL(
+            resolvingBookmarkData: data,
+            options: [.withSecurityScope],
+            relativeTo: nil,
+            bookmarkDataIsStale: &isStale
+        ))?.standardizedFileURL ?? URL(fileURLWithPath: root).standardizedFileURL
     }
 
     func recentRepos() -> [Repo] {
