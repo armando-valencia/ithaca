@@ -147,6 +147,8 @@ struct RootView: View {
                 .font(.callout)
                 .foregroundStyle(.secondary)
 
+            issueList
+
             VStack(alignment: .leading, spacing: 8) {
                 ForEach(store.workspaceRoots, id: \.self) { root in
                     HStack(spacing: 8) {
@@ -268,6 +270,8 @@ struct RootView: View {
                     .foregroundStyle(.red)
             }
 
+            issueList
+
             VStack(alignment: .leading, spacing: 8) {
                 ScrollView {
                     LazyVStack(alignment: .leading, spacing: 6) {
@@ -358,6 +362,7 @@ struct RootView: View {
             Text("Settings")
                 .font(.caption)
                 .foregroundStyle(.secondary)
+            issueList
             Toggle(isOn: Binding(
                 get: { store.showBranches },
                 set: { store.updateShowBranches($0) }
@@ -427,6 +432,40 @@ struct RootView: View {
                 .frame(height: 1)
         }
         .padding(.top, 4)
+    }
+
+    @ViewBuilder
+    private var issueList: some View {
+        if !store.issues.isEmpty {
+            VStack(alignment: .leading, spacing: 6) {
+                ForEach(store.issues) { issue in
+                    Text(issue.message)
+                        .font(.caption)
+                        .foregroundStyle(.red)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                HStack(spacing: 10) {
+                    Button("Rescan") {
+                        store.rescan()
+                    }
+                    .buttonStyle(.link)
+                    Button("Directories…") {
+                        showingSetupOverride = true
+                        showingSettings = false
+                    }
+                    .buttonStyle(.link)
+                    Button("Reset Saved Index") {
+                        store.resetCache()
+                    }
+                    .buttonStyle(.link)
+                }
+            }
+            .padding(8)
+            .background(
+                RoundedRectangle(cornerRadius: 8)
+                    .fill(Color.red.opacity(0.1))
+            )
+        }
     }
 
     private func moveSelection(_ direction: MoveCommandDirection) {
