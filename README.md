@@ -20,4 +20,7 @@ The repo index is stored at:
 
 - The app loads the cached index immediately at launch.
 - If workspace roots are configured, a background rescan starts after launch.
-- Scans are recursive and ignore common build/cache directories.
+- Scans are recursive, skip hidden descendant directories, and ignore common
+  build/cache directories.
+- A repository must contain a valid `.git` directory or linked-worktree `.git`
+  file. Bare repositories are not indexed.
