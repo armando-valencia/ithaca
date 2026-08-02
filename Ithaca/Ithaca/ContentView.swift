@@ -235,6 +235,11 @@ struct RootView: View {
                         RoundedRectangle(cornerRadius: 6)
                             .fill(Color.secondary.opacity(0.15))
                     )
+                if hotkeyStore.hotkey != nil {
+                    Text(hotkeyStore.registrationStatus.label)
+                        .font(.caption2)
+                        .foregroundStyle(hotkeyStore.registrationStatus == .unavailable ? Color.red : Color.secondary)
+                }
                 Button {
                     showingShortcutHelp.toggle()
                 } label: {
