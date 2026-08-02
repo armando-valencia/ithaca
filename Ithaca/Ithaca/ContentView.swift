@@ -21,7 +21,6 @@ struct RootView: View {
     @State private var branchLoading: Set<String> = []
     @State private var errorMessage: String?
     @State private var showingSetupOverride: Bool = false
-    @State private var showingShortcutHelp: Bool = false
     @State private var showingSettings: Bool = false
     @State private var hasInteracted: Bool = false
     @FocusState private var searchFocused: Bool
@@ -244,23 +243,6 @@ struct RootView: View {
                         .font(.caption2)
                         .foregroundStyle(hotkeyStore.registrationStatus == .unavailable ? Color.red : Color.secondary)
                 }
-                Button {
-                    showingShortcutHelp.toggle()
-                } label: {
-                    Image(systemName: "info.circle")
-                        .foregroundStyle(.secondary)
-                }
-                .buttonStyle(.plain)
-                .popover(isPresented: $showingShortcutHelp, arrowEdge: .bottom) {
-                    VStack(alignment: .leading, spacing: 6) {
-                        Text("Global Shortcut")
-                            .font(.callout)
-                        Text("Use ⌃⌥⌘I (letter I, not lowercase L).")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                    }
-                    .padding(10)
-                }
                 Spacer()
             }
 
@@ -372,6 +354,15 @@ struct RootView: View {
                     .foregroundStyle(.secondary)
             }
             .toggleStyle(.switch)
+
+            Divider()
+
+            VStack(alignment: .leading, spacing: 8) {
+                Text("Global Shortcut")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                HotkeyRecorder(hotkeyStore: hotkeyStore)
+            }
 
             Divider()
 
