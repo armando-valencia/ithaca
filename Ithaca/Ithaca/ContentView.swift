@@ -65,6 +65,8 @@ struct RootView: View {
             if isShown {
                 hasInteracted = false
                 searchFocused = true
+                branchByID = [:]
+                branchLoading = []
                 updateBranchesIfNeeded()
             }
         }
