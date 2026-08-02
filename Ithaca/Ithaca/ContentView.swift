@@ -21,7 +21,6 @@ struct RootView: View {
     @State private var branchLoading: Set<String> = []
     @State private var errorMessage: String?
     @State private var showingSetupOverride: Bool = false
-    @State private var showingShortcutHelp: Bool = false
     @State private var showingSettings: Bool = false
     @State private var hasInteracted: Bool = false
     @FocusState private var searchFocused: Bool
@@ -65,6 +64,8 @@ struct RootView: View {
             if isShown {
                 hasInteracted = false
                 searchFocused = true
+                branchByID = [:]
+                branchLoading = []
                 updateBranchesIfNeeded()
             }
         }
@@ -144,6 +145,8 @@ struct RootView: View {
             Text("Add directories to scan repositories.")
                 .font(.callout)
                 .foregroundStyle(.secondary)
+
+            issueList
 
             VStack(alignment: .leading, spacing: 8) {
                 ForEach(store.workspaceRoots, id: \.self) { root in
@@ -235,22 +238,10 @@ struct RootView: View {
                         RoundedRectangle(cornerRadius: 6)
                             .fill(Color.secondary.opacity(0.15))
                     )
-                Button {
-                    showingShortcutHelp.toggle()
-                } label: {
-                    Image(systemName: "info.circle")
-                        .foregroundStyle(.secondary)
-                }
-                .buttonStyle(.plain)
-                .popover(isPresented: $showingShortcutHelp, arrowEdge: .bottom) {
-                    VStack(alignment: .leading, spacing: 6) {
-                        Text("Global Shortcut")
-                            .font(.callout)
-                        Text("Use ⌃⌥⌘I (letter I, not lowercase L).")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                    }
-                    .padding(10)
+                if hotkeyStore.hotkey != nil {
+                    Text(hotkeyStore.registrationStatus.label)
+                        .font(.caption2)
+                        .foregroundStyle(hotkeyStore.registrationStatus == .unavailable ? Color.red : Color.secondary)
                 }
                 Spacer()
             }
@@ -260,6 +251,8 @@ struct RootView: View {
                     .font(.footnote)
                     .foregroundStyle(.red)
             }
+
+            issueList
 
             VStack(alignment: .leading, spacing: 8) {
                 ScrollView {
@@ -351,6 +344,7 @@ struct RootView: View {
             Text("Settings")
                 .font(.caption)
                 .foregroundStyle(.secondary)
+            issueList
             Toggle(isOn: Binding(
                 get: { store.showBranches },
                 set: { store.updateShowBranches($0) }
@@ -360,6 +354,15 @@ struct RootView: View {
                     .foregroundStyle(.secondary)
             }
             .toggleStyle(.switch)
+
+            Divider()
+
+            VStack(alignment: .leading, spacing: 8) {
+                Text("Global Shortcut")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                HotkeyRecorder(hotkeyStore: hotkeyStore)
+            }
 
             Divider()
 
@@ -420,6 +423,40 @@ struct RootView: View {
                 .frame(height: 1)
         }
         .padding(.top, 4)
+    }
+
+    @ViewBuilder
+    private var issueList: some View {
+        if !store.issues.isEmpty {
+            VStack(alignment: .leading, spacing: 6) {
+                ForEach(store.issues) { issue in
+                    Text(issue.message)
+                        .font(.caption)
+                        .foregroundStyle(.red)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                HStack(spacing: 10) {
+                    Button("Rescan") {
+                        store.rescan()
+                    }
+                    .buttonStyle(.link)
+                    Button("Directories…") {
+                        showingSetupOverride = true
+                        showingSettings = false
+                    }
+                    .buttonStyle(.link)
+                    Button("Reset Saved Index") {
+                        store.resetCache()
+                    }
+                    .buttonStyle(.link)
+                }
+            }
+            .padding(8)
+            .background(
+                RoundedRectangle(cornerRadius: 8)
+                    .fill(Color.red.opacity(0.1))
+            )
+        }
     }
 
     private func moveSelection(_ direction: MoveCommandDirection) {
