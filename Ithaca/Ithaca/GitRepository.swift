@@ -8,11 +8,11 @@
 import Foundation
 
 enum GitRepository {
-    static func isRepository(at url: URL) -> Bool {
+    nonisolated static func isRepository(at url: URL) -> Bool {
         gitDirectory(for: url) != nil
     }
 
-    static func gitDirectory(for repositoryURL: URL) -> URL? {
+    nonisolated static func gitDirectory(for repositoryURL: URL) -> URL? {
         let dotGitURL = repositoryURL.standardizedFileURL.appendingPathComponent(".git")
         var isDirectory: ObjCBool = false
         guard FileManager.default.fileExists(atPath: dotGitURL.path, isDirectory: &isDirectory) else {
@@ -42,7 +42,7 @@ enum GitRepository {
         return isGitDirectory(standardizedURL) ? standardizedURL : nil
     }
 
-    private static func isGitDirectory(_ url: URL) -> Bool {
+    nonisolated private static func isGitDirectory(_ url: URL) -> Bool {
         var isDirectory: ObjCBool = false
         guard FileManager.default.fileExists(atPath: url.path, isDirectory: &isDirectory), isDirectory.boolValue else {
             return false
@@ -55,7 +55,7 @@ enum GitRepository {
         ) && !isHeadDirectory.boolValue
     }
 
-    private static func readTrimmedText(from url: URL) -> String? {
+    nonisolated private static func readTrimmedText(from url: URL) -> String? {
         guard let data = try? Data(contentsOf: url),
               let text = String(data: data, encoding: .utf8) else {
             return nil
