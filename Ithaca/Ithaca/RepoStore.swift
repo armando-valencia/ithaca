@@ -119,18 +119,6 @@ final class RepoStore: ObservableObject {
         saveIndex()
     }
 
-    func setPinned(repoID: String, isPinned: Bool) {
-        guard let index = repos.firstIndex(where: { $0.id == repoID }) else { return }
-        repos[index].isPinned = isPinned
-        saveIndex()
-    }
-
-    func setOpenTarget(repoID: String, target: OpenTarget?) {
-        guard let index = repos.firstIndex(where: { $0.id == repoID }) else { return }
-        repos[index].openTarget = target
-        saveIndex()
-    }
-
     func isPathAllowed(_ path: String) -> Bool {
         let candidate = URL(fileURLWithPath: path).standardizedFileURL.path
         for root in workspaceRoots {
@@ -316,9 +304,7 @@ final class RepoStore: ObservableObject {
             if fileManager.fileExists(atPath: rootGitURL.path, isDirectory: &isRootGitDirectory) {
                 let repo = Repo(
                     name: rootURL.lastPathComponent,
-                    path: rootURL.path,
-                    rootPath: rootURL.path,
-                    rootName: rootURL.lastPathComponent
+                    path: rootURL.path
                 )
                 if seen.insert(repo.id).inserted {
                     results.append(repo)
@@ -346,9 +332,7 @@ final class RepoStore: ObservableObject {
                     let repoName = url.lastPathComponent
                     let repo = Repo(
                         name: repoName,
-                        path: url.path,
-                        rootPath: rootURL.path,
-                        rootName: rootURL.lastPathComponent
+                        path: url.path
                     )
                     if seen.insert(repo.id).inserted {
                         results.append(repo)
