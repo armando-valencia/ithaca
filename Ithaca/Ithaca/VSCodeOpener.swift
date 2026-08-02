@@ -6,7 +6,6 @@
 //
 
 import Foundation
-import AppKit
 
 enum OpenTargetError: LocalizedError {
     case failed(target: OpenTarget)
@@ -84,38 +83,28 @@ struct OpenTargetOpener {
 
 struct ProcessResult {
     let exitCode: Int32
-    let stdout: String
-    let stderr: String
 }
 
 enum ProcessRunner {
     static func run(executable: String, arguments: [String]) async -> ProcessResult {
         await withCheckedContinuation { continuation in
             let process = Process()
-            let stdoutPipe = Pipe()
-            let stderrPipe = Pipe()
 
             process.executableURL = URL(fileURLWithPath: executable)
             process.arguments = arguments
-            process.standardOutput = stdoutPipe
-            process.standardError = stderrPipe
+            process.standardOutput = FileHandle.nullDevice
+            process.standardError = FileHandle.nullDevice
 
             process.terminationHandler = { process in
-                let stdoutData = stdoutPipe.fileHandleForReading.readDataToEndOfFile()
-                let stderrData = stderrPipe.fileHandleForReading.readDataToEndOfFile()
-                let stdout = String(data: stdoutData, encoding: .utf8) ?? ""
-                let stderr = String(data: stderrData, encoding: .utf8) ?? ""
                 continuation.resume(returning: ProcessResult(
-                    exitCode: process.terminationStatus,
-                    stdout: stdout,
-                    stderr: stderr
+                    exitCode: process.terminationStatus
                 ))
             }
 
             do {
                 try process.run()
             } catch {
-                continuation.resume(returning: ProcessResult(exitCode: 1, stdout: "", stderr: error.localizedDescription))
+                continuation.resume(returning: ProcessResult(exitCode: 1))
             }
         }
     }

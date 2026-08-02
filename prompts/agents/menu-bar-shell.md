@@ -13,7 +13,7 @@ AUTHORITY
 
 REQUIREMENTS
 
-- macOS 13+, Swift 5
+- macOS 26.2+, Swift 5
 - Menu bar app with popover toggle
 - Popover closes on Esc
 - Search field auto-focuses on open
@@ -42,4 +42,4 @@ SKILLS
 
 - frontend-design (mandatory)
 
-You must apply the frontend-design skill when constructing or adjusting any UI. This skills lives in a directory at the root of the repo called `promots/skills`.
+You must apply the frontend-design skill when constructing or adjusting any UI. This skill lives in `prompts/skills` at the repository root.
