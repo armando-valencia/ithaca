@@ -34,25 +34,19 @@ nonisolated struct Repo: Identifiable, Codable, Hashable, Sendable {
     var lastOpened: Date?
     var isPinned: Bool
     var openTarget: OpenTarget?
-    var rootPath: String?
-    var rootName: String?
 
     init(
         name: String,
         path: String,
         lastOpened: Date? = nil,
         isPinned: Bool = false,
-        openTarget: OpenTarget? = nil,
-        rootPath: String? = nil,
-        rootName: String? = nil
+        openTarget: OpenTarget? = nil
     ) {
         self.name = name
         self.path = path
         self.lastOpened = lastOpened
         self.isPinned = isPinned
         self.openTarget = openTarget
-        self.rootPath = rootPath
-        self.rootName = rootName
         self.id = Repo.stableID(for: path)
     }
 
@@ -69,8 +63,6 @@ nonisolated struct Repo: Identifiable, Codable, Hashable, Sendable {
         case lastOpened
         case isPinned
         case openTarget
-        case rootPath
-        case rootName
     }
 
     init(from decoder: Decoder) throws {
@@ -82,8 +74,6 @@ nonisolated struct Repo: Identifiable, Codable, Hashable, Sendable {
         self.lastOpened = try container.decodeIfPresent(Date.self, forKey: .lastOpened)
         self.isPinned = try container.decodeIfPresent(Bool.self, forKey: .isPinned) ?? false
         self.openTarget = try container.decodeIfPresent(OpenTarget.self, forKey: .openTarget)
-        self.rootPath = try container.decodeIfPresent(String.self, forKey: .rootPath)
-        self.rootName = try container.decodeIfPresent(String.self, forKey: .rootName)
     }
 }
 
