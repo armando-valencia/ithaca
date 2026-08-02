@@ -13,7 +13,7 @@ AUTHORITY
 
 REQUIREMENTS
 
-- macOS 13+, Swift 5
+- macOS 26.2+, Swift 5
 - Menu bar app with popover toggle
 - Popover closes on Esc
 - Search field auto-focuses on open
